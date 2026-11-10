@@ -1,0 +1,94 @@
+# Builds the pinned generator, generates cloud_noise.vkcn twice, requires identical bytes and the pinned SHA-256,
+# packs the Autobuild package, and on a v* tag publishes the GitHub release.
+name: Build
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Windows Server 2025 with Visual Studio 2026 (MSVC v145) and Windows SDK 10.0.26100.0, the pinned toolchain
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        shell: cmd
+        run: |
+          call scripts\pinned.cmd
+          echo pinned: MSVC %PINNED_VCVARS_VER%, Windows SDK %PINNED_WINSDK%
+          dir "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\MSVC"
+          dir "C:\Program Files (x86)\Windows Kits\10\Lib"
+
+      - name: Install Autobuild
+        shell: bash
+        run: python -m pip install --upgrade autobuild
+
+      - name: Generate (twice), compare, check the pinned hash, stage
+        shell: bash
+        env:
+          AUTOBUILD_BUILD_ID: ${{ github.run_number }}
+          # build-cmd.sh: builds with scripts/build.cmd, runs the sinf fingerprint check inside the generator,
+          # generates gen1 and gen2, `cmp`s them, verifies the container and compares EXPECTED_SHA256
+          VCVARSALL_OVERRIDE: C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat
+        run: autobuild build --no-configure -p common
+
+      - name: Determinism evidence
+        shell: bash
+        run: |
+          set -e
+          build/cloudnoise_gen.exe --fingerprint
+          sha256sum build/gen1.vkcn build/gen2.vkcn
+          cmp build/gen1.vkcn build/gen2.vkcn
+          echo "pinned: $(grep -v '^#' EXPECTED_SHA256)"
+          test "$(sha256sum build/gen1.vkcn | cut -d' ' -f1)" = "$(grep -v '^#' EXPECTED_SHA256 | cut -d' ' -f1)"
+          build/cloudnoise_gen.exe --verify stage/clouds/cloud_noise.vkcn
+
+      - name: Package
+        shell: bash
+        env:
+          AUTOBUILD_BUILD_ID: ${{ github.run_number }}
+        run: |
+          autobuild package -p common --archive-format tzst < /dev/null
+          mkdir -p dist
+          mv cloudnoise-*-common-*.tar.zst dist/
+          cp stage/clouds/cloud_noise.vkcn dist/
+          (cd dist && sha256sum cloud_noise.vkcn > cloud_noise.vkcn.sha256 && sha1sum cloudnoise-*.tar.zst > package.sha1 && sha256sum cloudnoise-*.tar.zst > package.sha256)
+          ls -l dist; cat dist/*.sha*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloudnoise-package
+          path: dist/*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cloudnoise-package
+          path: dist
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          {
+            echo "Noise package for the Vulkanstorm volumetric clouds (TileableVolumeNoise, MIT)."
+            echo
+            echo "- cloud_noise.vkcn SHA-256: \`$(cut -d' ' -f1 cloud_noise.vkcn.sha256)\`"
+            echo "- package (Autobuild) SHA-1: \`$(cut -d' ' -f1 package.sha1)\`, SHA-256: \`$(cut -d' ' -f1 package.sha256)\`"
+            echo "- generated twice in CI with identical bytes, matching EXPECTED_SHA256; see README.md"
+          } > notes.md
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "cloudnoise ${GITHUB_REF_NAME#v}" --notes-file notes.md \
+            cloud_noise.vkcn cloud_noise.vkcn.sha256 cloudnoise-*-common-*.tar.zst package.sha1 package.sha256

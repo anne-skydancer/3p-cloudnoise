@@ -1,0 +1,6 @@
+# Pinned SHA-256 of cloud_noise.vkcn made by cloudnoise_gen 1.0.0 (TVN 1f879a26, glm 0.9.7).
+# CI generates the file twice, requires both to be byte-identical and requires this hash.
+# A change of the generator, the vendored code or the pinned toolchain changes it on purpose:
+# update this file in the same commit, tag a new version, and change the viewer's
+# CLOUD_NOISE_SHA256 in lockstep.
+ca508a14700600161f9aa720ca4a4f6cec76c1645330dbab9bfe83945654843c  clouds/cloud_noise.vkcn

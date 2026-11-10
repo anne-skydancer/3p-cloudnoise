@@ -1,0 +1,67 @@
+<?xml version="1.0" ?>
+<llsd>
+  <map>
+    <key>package_description</key>
+    <map>
+      <key>canonical_repo</key>
+      <string>https://github.com/anne-skydancer/3p-cloudnoise</string>
+      <key>copyright</key>
+      <string>Copyright (c) 2017 Sebastien Hillaire (TileableVolumeNoise); Copyright (c) 2005 - 2015 G-Truc Creation (GLM); Copyright (c) 2026 Anne Skydancer</string>
+      <key>description</key>
+      <string>Volumetric clouds noise textures (cloud_noise.vkcn): base 128^3 and erosion 32^3 from TileableVolumeNoise, curl 128^2 derived from its Perlin noise.</string>
+      <key>license</key>
+      <string>MIT</string>
+      <key>license_file</key>
+      <string>LICENSES/TileableVolumeNoise.txt</string>
+      <key>name</key>
+      <string>cloudnoise</string>
+      <key>platforms</key>
+      <map>
+        <key>common</key>
+        <map>
+          <key>build_directory</key>
+          <string>stage</string>
+          <key>configurations</key>
+          <map>
+            <key>Release</key>
+            <map>
+              <key>build</key>
+              <map>
+                <key>arguments</key>
+                <array>
+                  <string>-c</string>
+                  <string>../build-cmd.sh</string>
+                </array>
+                <key>command</key>
+                <string>bash</string>
+              </map>
+              <key>default</key>
+              <boolean>true</boolean>
+              <key>name</key>
+              <string>Release</string>
+            </map>
+          </map>
+          <key>manifest</key>
+          <array>
+            <string>clouds/cloud_noise.vkcn</string>
+            <string>clouds/cloud_noise.vkcn.sha256</string>
+            <string>clouds/README.md</string>
+            <string>LICENSES/TileableVolumeNoise.txt</string>
+            <string>LICENSES/glm.txt</string>
+            <string>LICENSES/cloudnoise.txt</string>
+          </array>
+          <key>name</key>
+          <string>common</string>
+        </map>
+      </map>
+      <key>source_directory</key>
+      <string>.</string>
+      <key>version_file</key>
+      <string>VERSION.txt</string>
+    </map>
+    <key>type</key>
+    <string>autobuild</string>
+    <key>version</key>
+    <string>1.3</string>
+  </map>
+</llsd>
