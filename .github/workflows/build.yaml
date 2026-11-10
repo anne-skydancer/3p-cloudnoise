@@ -16,7 +16,7 @@ jobs:
     # Windows Server 2025 with Visual Studio 2026 (MSVC v145) and Windows SDK 10.0.26100.0, the pinned toolchain
     runs-on: windows-2025-vs2026
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Toolchain
         shell: cmd
@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Autobuild
         shell: bash
-        run: python -m pip install --upgrade autobuild
+        run: python -m pip install autobuild==3.10.2 # the version the viewer's CI uses
 
       - name: Generate (twice), compare, check the pinned hash, stage
         shell: bash
@@ -62,7 +62,7 @@ jobs:
           (cd dist && sha256sum cloud_noise.vkcn > cloud_noise.vkcn.sha256 && sha1sum cloudnoise-*.tar.zst > package.sha1 && sha256sum cloudnoise-*.tar.zst > package.sha256)
           ls -l dist; cat dist/*.sha*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cloudnoise-package
           path: dist/*
@@ -74,7 +74,16 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      # a release is only made from a tag that names the version in VERSION.txt and is on main
+      - name: Check the tag
+        run: |
+          test "$GITHUB_REF_NAME" = "v$(tr -d '
+' < VERSION.txt)" || { echo "tag $GITHUB_REF_NAME is not v$(cat VERSION.txt)" >&2; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "tag $GITHUB_REF_NAME is not on main" >&2; exit 1; }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: cloudnoise-package
           path: dist
